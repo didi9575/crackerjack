@@ -10,7 +10,7 @@ class HashcatManager:
         self.force = force
 
     def get_supported_hashes(self):
-        hashcat_bin = self.shell.excute(['which', 'hashcat'], user_id=0)
+        hashcat_bin = self.shell.execute(['which', 'hashcat'], user_id=0)
         #to be faster
         output = self.shell.execute([hashcat_bin, '--help'], user_id=0)
 
