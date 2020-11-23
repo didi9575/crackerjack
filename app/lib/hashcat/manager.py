@@ -10,7 +10,9 @@ class HashcatManager:
         self.force = force
 
     def get_supported_hashes(self):
-        output = self.shell.execute([self.hashcat_binary, '--help'], user_id=0)
+        hashcat_bin = self.shell.excute(['which', 'hashcat'], user_id=0)
+        #to be faster
+        output = self.shell.execute([hashcat_bin, '--help'], user_id=0)
 
         # Split lines using \n and run strip against all elements of the list.
         lines = list(map(str.strip, output.split("\n")))
@@ -279,7 +281,8 @@ class HashcatManager:
         length = len(self.hashcat_binary)
         for line in output:
             # Check if the beginning of the command path matches the path of the hashcat binary path.
-            if line[:length] == self.hashcat_binary:
+            #if line[:length] == self.hashcat_binary:
+            if self.hashcat_binary in line :
                 processes.append(line)
 
         return processes

@@ -49,7 +49,34 @@ class ScreenInstance:
         # Cannot pass the "command" variable as a list to shell.execute() because screen expects it to be passed as
         # a string instead. Therefore, although the command argument is a dict, we manually escape all of it.
         sanitised = self.shell.build_command_from_dict(command)
-
+        liste = sanitised[0].split("/")
+        chaine = ""
+        for i in liste[:-1]:
+            chaine +=str(i+"/")
+        chaine_cd = str("cd "+chaine)
+        #To be in the hashcat folder
+        cmd = [
+            'screen',
+            '-S',
+            self.name,
+            '-p',
+            '0',
+            '-X',
+            'stuff',
+            chaine_cd
+        ]
+        output = self.shell.execute(cmd)
+        #To press ENTER
+        output = self.shell.execute(
+            [
+                'screen',
+                '-x',
+                self.name,
+                '-X',
+                'stuff',
+                '\\015'
+            ]
+        )
         # Paste command into the input buffer.
         cmd = [
             'screen',
