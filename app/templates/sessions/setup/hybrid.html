@@ -1,0 +1,219 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+
+{% if session.hashcat.state == 1 %}
+<div class="row mt-5">
+    <div class="col">
+        <div class="alert alert-warning">This session is currently running. Any changes you make on this page will not have any effect on it unless it is restarted.</div>
+    </div>
+</div>
+{% endif %}
+
+{% set active_nav = 'hybrid' %}
+{% include 'sessions/includes/header.html' %}
+
+<div class="row mt-5">
+    <div class="col-2">
+        {% include 'sessions/includes/nav.html' %}
+    </div>
+    <div class="col">
+        <form id="setup-hybrid" method="post" enctype="multipart/form-data" action="{{ url_for('sessions.setup_hybrid_save', session_id=session.id) }}" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="card">
+                <h5 class="card-header">Brute Force Options</h5>
+                <div class="card-body">
+                    <div class="form-group">
+                        <h4>Increments</h4>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="enable_increments">Enable Increments</label>
+                        <div class="custom-control custom-switch float-right">
+                            <input name="enable_increments" type="checkbox" class="custom-control-input" id="enable_increments" value="1" {{ 'checked' if session.hashcat.increment_min|int > 0 and session.hashcat.increment_max|int > 0 else '' }}>
+                            <label class="custom-control-label" for="enable_increments"></label>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <label for="increment-min" class="col-sm-10 col-form-label">Start mask incrementing at</label>
+                        <div class="col">
+                            <input type="number" min="1" step="1" class="form-control text-right" name="increment-min" id="increment-min" value="{{ session.hashcat.increment_min }}" placeholder="1" {{ 'disabled' if session.hashcat.increment_min|int <= 0 }}>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <label for="increment-max" class="col-sm-10 col-form-label">Stop mask incrementing at</label>
+                        <div class="col">
+                            <input type="number" min="1" step="1" class="form-control text-right" name="increment-max" id="increment-max" value="{{ session.hashcat.increment_max }}" placeholder="10" {{ 'disabled' if session.hashcat.increment_max|int <= 0 }}>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <h4>Mask</h4>
+                    </div>
+
+                    <div class="form-group row">
+                        <label for="compiled-mask" class="col-sm-3 col-form-label">Calculated Mask</label>
+                        <div class="col">
+                            <input type="text" class="form-control text-right" name="compiled-mask" id="compiled-mask" value="{{ session.hashcat.mask }}" placeholder="This will be either calculated or add manually add a mask">
+                            <div class="error mask-error"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <label for="mask-max-characters" class="col-sm-3 col-form-label">Maximum Characters</label>
+                        <div class="col">
+                            <input type="number" min="0" step="1" class="form-control text-right" value="0" name="mask-max-characters" id="mask-max-characters">
+                        </div>
+                    </div>
+
+                    <div id="mask-placeholder"></div>
+
+                    <div id="mask-template" class="d-none mask-position">
+                        <div class="row">
+                            <div class="col-4">Position <span class="position-number"></span></div>
+                            <div class="col-2">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input mask-checkbox" data-mask="lower" id="">
+                                    <label class="custom-control-label mask-label" data-mask="lower" for="">Lowercase</label>
+                                </div>
+
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input mask-checkbox" data-mask="upper" id="">
+                                    <label class="custom-control-label mask-label" data-mask="upper" for="">Uppercase</label>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input mask-checkbox" data-mask="digits" id="">
+                                    <label class="custom-control-label mask-label" data-mask="digits" for="">Digits</label>
+                                </div>
+
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input mask-checkbox" data-mask="special" id="">
+                                    <label class="custom-control-label mask-label" data-mask="special" for="">Special</label>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input mask-checkbox" data-mask="hexlower" id="">
+                                    <label class="custom-control-label mask-label" data-mask="hexlower" for="">Lower Hex</label>
+                                </div>
+
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input mask-checkbox" data-mask="hexupper" id="">
+                                    <label class="custom-control-label mask-label" data-mask="hexupper" for="">Upper Hex</label>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input mask-checkbox" data-mask="binary" id="">
+                                    <label class="custom-control-label mask-label" data-mask="binary" for="">Binary</label>
+                                </div>
+
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input mask-checkbox" data-mask="all" id="">
+                                    <label class="custom-control-label mask-label" data-mask="all" for="">All</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-4"></div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label class="col-form-label col-form-label-sm mask-label" data-mask="charset" for="">Custom Charset</label>
+                                    <input class="form-control form-control-sm mask-input mask-charset" data-mask="charset" type="text" id="">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h5 class="card-header">Wordlist Options</h5>
+                <div class="card-body">
+                    <div class="form-group">
+                        <div class="custom-control custom-radio">
+                            <input type="radio" id="wordlist-global" name="wordlist_type" class="mode-option custom-control-input" value="0" {{ 'checked' if session.hashcat.wordlist_type == 0 or session.hashcat.wordlist_type == '' else '' }}>
+                            <label class="custom-control-label" for="wordlist-global">Global Wordlist</label>
+                        </div>
+
+                        <select name="wordlist" id="wordlist" class="form-control">
+                            <option value=""></option>
+                            <optgroup label="Directories">
+                                {% for name, wordlist in wordlists.items() %}
+                                {% if wordlist['type'] == 'folder' %}
+                                <option value="{{ name }}">{{ name }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </optgroup>
+
+                            <optgroup label="Files">
+                                {% for name, wordlist in wordlists.items() %}
+                                {% if wordlist['type'] == 'file' %}
+                                <option value="{{ name }}">{{ name }} - {{ wordlist['size_human'] }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="custom-control custom-radio">
+                            <input type="radio" id="wordlist-session" name="wordlist_type" class="mode-option custom-control-input" value="1" {{ 'checked' if session.hashcat.wordlist_type == 1 else '' }}>
+                            <label class="custom-control-label" for="wordlist-session">Custom Session Wordlist</label>
+                        </div>
+
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" id="custom_wordlist" name="custom_wordlist">
+                            <label class="custom-file-label" for="custom_wordlist">Choose your wordlist</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="custom-control custom-radio">
+                            <input type="radio" id="wordlist-passwords" name="wordlist_type" class="mode-option custom-control-input" value="2" {{ 'checked' if session.hashcat.wordlist_type == 2 else '' }}>
+                            <label class="custom-control-label" for="wordlist-passwords">Create wordlist from already cracked passwords</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group mt-3">
+                <button type="submit" class="btn btn-primary btn-block">save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="text/javascript" src="{{ url_for('static', filename='js/crackerjack/sessions/mask.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/crackerjack/sessions/wordlist.js') }}"></script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        CJ_HashcatMasks.init();
+        CJ_HashcatMasks.parseFromString($('#compiled-mask').val());
+
+        CJ_SessionsMask.init();
+
+        $('#setup-mask').submit(function() {
+            // Check for any errors.
+            var maskError = $('.mask-error').text().trim();
+            if (maskError.length > 0) {
+                alert('It appears that your mask is incorrect. Please correct any errors before saving the form');
+                return false;
+            }
+            return true;
+        });
+    });
+</script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#wordlist').select2({}).val('{{ session.hashcat.wordlist }}').trigger('change');
+    });
+</script>
+
+{% endblock %}

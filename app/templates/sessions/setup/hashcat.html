@@ -73,6 +73,10 @@
                             <input type="radio" id="mode-bruteforce" name="mode" class="mode-option custom-control-input" value="3" {{ 'checked' if session.hashcat.mode == 3 else '' }}>
                             <label class="custom-control-label" for="mode-bruteforce">Brute Force</label>
                         </div>
+                        <div class="custom-control custom-radio">
+                            <input type="radio" id="mode-hybrid" name="mode" class="mode-option custom-control-input" value="6" {{ 'checked' if session.hashcat.mode == 6 else '' }}>
+                            <label class="custom-control-label" for="mode-hybrid">Hybrid (Wordlist and Mask)</label>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -124,6 +124,7 @@ def setup_hashcat(session_id):
     session = sessions.get(user_id=user_id, session_id=session_id)[0]
 
     supported_hashes = hashcat.get_supported_hashes()
+
     # We need to process the array in a way to make it easy for JSON usage.
     supported_hashes = hashcat.compact_hashes(supported_hashes)
     if len(supported_hashes) == 0:
@@ -154,7 +155,7 @@ def setup_hashcat_save(session_id):
     workload = int(request.form.get('workload', 2))
     mode = int(request.form['mode'].strip())
 
-    if mode != 0 and mode != 3:
+    if mode != 0 and mode != 3 and mode != 6:
         # As all the conditions below depend on the mode, if it's wrong return to the previous page immediately.
         flash('Invalid attack mode selected', 'error')
         return redirect(url_for('sessions.setup_hashcat', session_id=session_id))
@@ -175,9 +176,126 @@ def setup_hashcat_save(session_id):
     sessions.set_hashcat_setting(session_id, 'optimised_kernel', optimised_kernel)
     sessions.set_hashcat_setting(session_id, 'workload', workload)
 
-    redirect_to = 'wordlist' if mode == 0 else 'mask'
+    if mode == 0 :
+        redirect_to = 'wordlist'
+    elif mode == 3 :
+        redirect_to = 'mask'
+    elif mode == 6 :
+        redirect_to = 'hybrid'
 
     return redirect(url_for('sessions.setup_' + redirect_to, session_id=session_id))
+
+@bp.route('/<int:session_id>/setup/hybrid', methods=['GET'])
+@login_required
+def setup_hybrid(session_id):
+    provider = Provider()
+    sessions = provider.sessions()
+    wordlists = provider.wordlists()
+
+    if not sessions.can_access(current_user, session_id):
+        flash('Access Denied', 'error')
+        return redirect(url_for('home.index'))
+
+    user_id = 0 if current_user.admin else current_user.id
+    session = sessions.get(user_id=user_id, session_id=session_id)[0]
+
+    return render_template(
+        'sessions/setup/hybrid.html',
+        session=session,
+        wordlists=wordlists.get_wordlists()
+    )
+
+
+@bp.route('/<int:session_id>/setup/hybrid/save', methods=['POST'])
+@login_required
+def setup_hybrid_save(session_id):
+    provider = Provider()
+    sessions = provider.sessions()
+    wordlists = provider.wordlists()
+
+    has_errors = False
+
+    if not sessions.can_access(current_user, session_id):
+        flash('Access Denied', 'error')
+        return redirect(url_for('home.index'))
+
+    #WORDLIST
+
+    wordlist_type = int(request.form['wordlist_type'].strip())
+    if wordlist_type == 0:
+        # Global wordlist.
+        wordlist = request.form['wordlist'].strip()
+        if not wordlists.is_valid_wordlist(wordlist):
+            flash('Invalid wordlist selected', 'error')
+            has_errors=True
+
+        wordlist_location = wordlists.get_wordlist_path(wordlist)
+        sessions.set_hashcat_setting(session_id, 'wordlist', wordlist_location)
+
+    elif wordlist_type == 1:
+        # Custom wordlist.
+        save_as = sessions.session_filesystem.get_custom_wordlist_path(current_user.id, session_id, prefix='custom_wordlist_', random=True)
+        if len(request.files) != 1:
+            flash('Uploaded file could not be found', 'error')
+            has_errors=True
+
+        file = request.files['custom_wordlist']
+        if file.filename == '':
+            flash('No hashes uploaded', 'error')
+            has_errors=True
+
+        file.save(save_as)
+        sessions.set_hashcat_setting(session_id, 'wordlist', save_as)
+    elif wordlist_type == 2:
+        # Create wordlist from cracked passwords.
+        save_as = sessions.session_filesystem.get_custom_wordlist_path(current_user.id, session_id, prefix='pwd_wordlist')
+        sessions.export_cracked_passwords(session_id, save_as)
+        sessions.set_hashcat_setting(session_id, 'wordlist', save_as)
+    else:
+        flash('Invalid wordlist option', 'error')
+        has_errors=True
+
+
+    #MASK
+
+    mask = request.form['compiled-mask'].strip()
+    enable_increments = int(request.form.get('enable_increments', 0))
+    if enable_increments == 1:
+        increment_min = int(request.form['increment-min'].strip())
+        increment_max = int(request.form['increment-max'].strip())
+    else:
+        increment_min = 0
+        increment_max = 0
+
+    if len(mask) == 0:
+        flash('No mask set', 'error')
+        has_errors = True
+
+    if enable_increments == 1:
+        if increment_min <= 0:
+            has_errors = True
+            flash('Min Increment is invalid', 'error')
+
+        if increment_max <= 0:
+            has_errors = True
+            flash('Max Increment is invalid', 'error')
+
+        if increment_min > increment_max:
+            has_errors = True
+            flash('Min Increment cannot be bigger than Max Increment', 'error')
+    else:
+        increment_min = 0
+        increment_max = 0
+
+    if has_errors:
+        return redirect(url_for('sessions.setup_hybrid', session_id=session_id))
+
+    sessions.set_hashcat_setting(session_id, 'wordlist_type', wordlist_type)
+    sessions.set_hashcat_setting(session_id, 'mask', mask)
+    sessions.set_hashcat_setting(session_id, 'increment_min', increment_min)
+    sessions.set_hashcat_setting(session_id, 'increment_max', increment_max)
+
+    return redirect(url_for('sessions.settings', session_id=session_id))
 
 
 @bp.route('/<int:session_id>/setup/mask', methods=['GET'])
@@ -337,18 +455,15 @@ def view(session_id):
     provider = Provider()
     sessions = provider.sessions()
     hashcat = provider.hashcat()
-
     if not sessions.can_access(current_user, session_id):
         flash('Access Denied', 'error')
         return redirect(url_for('home.index'))
 
     user_id = 0 if current_user.admin else current_user.id
     session = sessions.get(user_id=user_id, session_id=session_id)[0]
-
     supported_hashes = hashcat.get_supported_hashes()
     # We need to process the array in a way to make it easy for JSON usage.
     supported_hashes = hashcat.compact_hashes(supported_hashes)
-
     return render_template(
         'sessions/view.html',
         session=session,
@@ -361,7 +476,6 @@ def view(session_id):
 def action(session_id):
     provider = Provider()
     sessions = provider.sessions()
-
     if not sessions.can_access(current_user, session_id):
         flash('Access Denied', 'error')
         return redirect(url_for('home.index'))
@@ -372,13 +486,11 @@ def action(session_id):
     if len(session.validation) > 0:
         flash('Please configure all required settings and try again.', 'error')
         return redirect(url_for('sessions.view', session_id=session_id))
-
     action = request.form['action'].strip()
     result = sessions.hashcat_action(session_id, action)
     if result is False:
         flash('Could not execute action. Please check that all settings have been configured and try again.', 'error')
         return redirect(url_for('sessions.view', session_id=session_id))
-
     return redirect(url_for('sessions.view', session_id=session_id))
 
 

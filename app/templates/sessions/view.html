@@ -16,7 +16,15 @@
                     <tbody>
                     <tr>
                         <th scope="row">Cracking Mode</th>
-                        <td>{{ 'Wordlist' if session.hashcat.mode == 0 else 'Brute Force' }}</td>
+                        <td>
+                            {% if session.hashcat.mode == 0 %}
+                            Wordlist
+                            {% elif session.hashcat.mode == 3 %}
+                            Brute Force
+                            {% elif session.hashcat.mode == 6 %}
+                            Hybrid
+                            {% endif %} 
+                        </td>
                     </tr>
                     <tr>
                         <th scope="row">Hash Type</th>
@@ -41,10 +49,37 @@
                         <th scope="row">Rule</th>
                         <td><abbr title="{{ session.hashcat.rule_path }}">{{ session.hashcat.rule if session.hashcat.mode == 0 else '' }}</abbr></td>
                     </tr>
-                    {% else %}
+                    {% elif session.hashcat.mode == 3 %}
                     <tr>
                         <th scope="row">Mask</th>
                         <td>{{ session.hashcat.mask if session.hashcat.mode == 3 else '' }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Increments</th>
+                        <td>
+                            {% if session.hashcat.increment_min|int > 0 or session.hashcat.increment_max|int > 0 %}
+                            {{ session.hashcat.increment_min }} - {{ session.hashcat.increment_max }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <th scope="row">Wordlist</th>
+                        <td>
+                            <abbr title="{{ session.hashcat.wordlist_path }}">
+                                {% if session.hashcat.wordlist_type == 0 or session.hashcat.wordlist_type == '' %}
+                                    {{ session.hashcat.wordlist if session.hashcat.mode == 6 else '' }}
+                                {% elif session.hashcat.wordlist_type == 1 %}
+                                    Custom Session Wordlist
+                                {% elif session.hashcat.wordlist_type == 2 %}
+                                    Generated from Passwords
+                                {% endif %}
+                            </abbr>
+                        </td>  
+                    </tr>
+                    <tr>
+                        <th scope="row">Mask</th>
+                        <td>{{ session.hashcat.mask if session.hashcat.mode == 6 else '' }}</td>
                     </tr>
                     <tr>
                         <th scope="row">Increments</th>

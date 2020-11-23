@@ -17,6 +17,10 @@
     <li class="nav-item">
         <a class="nav-link {{ 'active' if active_nav == 'mask' }}" href="{{ url_for('sessions.setup_mask', session_id=session.id) }}"><i class="fas fa-sliders-h mr-1"></i>Mask</a>
     </li>
+        {% elif session.hashcat.mode == 6 %}
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_nav == 'hybrid' }}" href="{{ url_for('sessions.setup_hybrid', session_id=session.id) }}"><i class="fas fa-sliders-h mr-1"></i>Hybrid</a>
+    </li>
         {% endif %}
     {% endif %}
     <li class="nav-item">

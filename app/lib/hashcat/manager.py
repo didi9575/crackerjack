@@ -107,13 +107,13 @@ class HashcatManager:
             hashfile: '',
         }
 
-        if mode == 0:
+        if mode == 0 or mode == 6:
             # Wordlist.
             command[wordlist] = ''
 
             if len(rule) > 0:
                 command['--rules-file'] = rule
-        elif mode == 3:
+        if mode == 3 or mode == 6:
             # Bruteforce.
             parsed_mask = self.parse_mask_from_string(mask)
             for group in parsed_mask['groups']:
@@ -129,7 +129,7 @@ class HashcatManager:
 
             if increment_max > 0:
                 command['--increment-max'] = increment_max
-        else:
+        if mode != 0 and mode != 3 and mode != 6 :
             # Invalid or not implemented yet.
             return {}
 
@@ -138,7 +138,7 @@ class HashcatManager:
 
         if self.force:
             command['--force'] = ''
-
+        print(command)
         return command
 
     def build_restore_command(self, session_name):
