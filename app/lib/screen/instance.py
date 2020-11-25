@@ -43,11 +43,7 @@ class ScreenInstance:
     def state(self, value):
         self._state = value
 
-    def execute(self, command):
-        # Read more here: https://www.gnu.org/software/screen/manual/screen.html
-
-        # Cannot pass the "command" variable as a list to shell.execute() because screen expects it to be passed as
-        # a string instead. Therefore, although the command argument is a dict, we manually escape all of it.
+    def execute_cd(self, command):
         sanitised = self.shell.build_command_from_dict(command)
         liste = sanitised[0].split("/")
         chaine = ""
@@ -77,6 +73,14 @@ class ScreenInstance:
                 '\\015'
             ]
         )
+
+    def execute(self, command):
+        # Read more here: https://www.gnu.org/software/screen/manual/screen.html
+
+        # Cannot pass the "command" variable as a list to shell.execute() because screen expects it to be passed as
+        # a string instead. Therefore, although the command argument is a dict, we manually escape all of it.
+        sanitised = self.shell.build_command_from_dict(command)
+
         # Paste command into the input buffer.
         cmd = [
             'screen',

@@ -240,6 +240,7 @@ class SessionManager:
             # Even though we renamed the file, as it is still open the OS handle will now point to the renamed file.
             # We re-set the screen logfile to the original file.
             screen.set_logfile(self.session_filesystem.get_screenfile_path(session.user_id, session_id))
+            screen.execute_cd(command)
             screen.execute(command)
 
             # Every time we start a session, we make a copy of the settings and put them in the hashcat_history table.

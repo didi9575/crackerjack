@@ -324,6 +324,7 @@ class HashcatManager:
         #   5   CRACKED
         #   98  ERROR
         #   99  UNKNOWN
+
         status = 0
         if self.is_process_running(screen_name):
             status = 1
